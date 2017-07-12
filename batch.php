@@ -1,9 +1,7 @@
 <?php
-/**
- * for downloading from: http://files.pushshift.io/reddit/comments/
- */
+// for downloading from: http://files.pushshift.io/reddit/comments/
 
-$startingDirectory = "/volumes/My Passport Ultra/reddit comments/"; // up to RC_2015-06.bz2 for now
+$startingDirectory = "/volumes/My Passport Ultra/reddit comments/";
 $serverDirectory = "http://files.pushshift.io/reddit/comments/";
 $downloadList = ['RC_2015-05.bz2'];
 
@@ -22,11 +20,11 @@ foreach($dom->getElementsByTagName('a') as $node) {
 }
 
 while (count($downloadList)) {
-	@$fp = fopen($startingDirectory.$downloadList[0], 'wb');
-	$ch = curl_init($serverDirectory.$downloadList[0]);
+	@$fp = fopen($startingDirectory.reset($downloadList), 'wb');
+	$ch = curl_init($serverDirectory.reset($downloadList));
 	curl_setopt($ch, CURLOPT_FILE, $fp);
 	curl_exec($ch);
 	curl_close($ch);
 	fclose($fp);
-	unset($downloadList[0]);
+	unset($downloadList[key($downloadList)]);
 }
