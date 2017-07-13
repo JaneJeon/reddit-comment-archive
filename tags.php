@@ -4,15 +4,19 @@
 $localDirectory = "/volumes/My Passport Ultra/reddit comments/";
 $dir = dir($localDirectory);
 
+# count how many times each tag appears
 $tags = [];
 $total = 0;
 
+# read through every file to check for tags
 while ($file = $dir->read()) {
-	if ($file != "." && $file != ".." && !preg_match('/\.bz2$/', $file)) {
-		@$fp = fopen($file, 'rb');
+	if (!preg_match('/\.(\S)*$/', $file)) {
+		@$fp = fopen($localDirectory.$file, 'rb');
 		while (!feof($fp)) {
-			# count how many times each tag appears
-			foreach (@json_decode(fgets($fp), true) as $tag => $value)
+            @$comment = json_decode(fgets($fp), true);
+            # some lines are not in proper json format, so skip those
+            if (!is_array($comment)) continue;
+			foreach ($comment as $tag => $value)
 				array_key_exists($tag, $tags) ? $tags[$tag]++ : $tags[$tag] = 1;
 			$total++;
 		}
