@@ -1,26 +1,11 @@
 <?php
-# insert comment values into database
+# set up the database, then insert comments
 
 $var = parse_ini_file('config.ini');
 
-# change the fields you are interested in as you see fit
-$tags = ['created_utc' => 'INT unsigned NOT NULL',
-        'score' => 'INT NOT NULL',
-        'ups' => 'INT',
-        'subreddit' => 'VARCHAR(20) CHARACTER SET utf8mb4 NOT NULL',
-        'link_id' => 'VARCHAR(10) CHARACTER SET utf8mb4 NOT NULL PRIMARY KEY',
-        'stickied' => 'BOOL', # BOOL is alias for TINYINT(1) - a value of 0 is false. Nonzero is true.
-        'subreddit_id' => 'VARCHAR(10) CHARACTER SET utf8mb4 NOT NULL',
-        'controversiality' => 'INT',
-        'body' => 'TEXT CHARACTER SET utf8mb4 NOT NULL',
-        'edited' => 'BOOL',
-        'gilded' => 'BOOL',
-        'id' => 'VARCHAR(10) CHARACTER SET utf8mb4 NOT NULL UNIQUE',
-        'parent_id' => 'VARCHAR(10) CHARACTER SET utf8mb4 NOT NULL',
-        'author' => 'VARCHAR(20) CHARACTER SET utf8mb4 NOT NULL'];
-
+$tags = $var['tags'];
 # fields you want to index
-$i_fields = ['parent_id', 'author'];
+$i_fields = ['parent_id', 'author', 'created_utc'];
 
 # first, connect w/o specifying db
 $db = new mysqli($var['host'], $var['username'], $var['password']) or die ('Failed to connect: '.mysqli_error($db));
@@ -50,23 +35,29 @@ foreach ($i_fields as $field) {
 $localDirectory = $var['localDirectory'];
 $dir = dir($localDirectory) or die ('Not a valid directory');
 
+# get logical core number to determine the size of process/thread pool
+if (PHP_OS == 'Darwin') { # macOS
+    $max_processes = (int) shell_exec("sysctl hw.logicalcpu | sed 's/hw.logicalcpu: //g'") + 1;
+} else if (PHP_OS == 'Linux') {
+    $max_processes = (int) shell_exec("cat /proc/cpuinfo | grep processor | wc -l") + 1;
+} else exit ('OS not supported'); # Windows, etc
+
+# create temporary table for keeping track of thread pool
+$db->query('CREATE TABLE Progress (task_id INT PRIMARY KEY AUTO_INCREMENT, done BOOL NOT NULL)');
+
+# add data from each file
 while ($file = $dir->read()) {
     # skip directory "files", files that are still zipped, and .DS_Store if you're using a Mac
     if (preg_match('/\.(\S)*$/', $file)) continue;
-    @$fp = fopen($localDirectory.$file, 'rb');
-    while (!feof($fp)) {
-        @$comment = json_decode(fgets($fp), true);
-        # some lines are not in proper json format, so skip those
-        if (!is_array($comment)) continue;
-        $stmt1 = 'INSERT INTO Comments (';
-        $stmt2 = 'VALUES (';
-        foreach ($comment as $tag => $value) {
-            $stmt1 = $stmt1.$tag.', ';
-            $stmt2 = $stmt2.$value.', ';
-        }
-        # append two pieces of insert statement and execute it
-        $db->query(rtrim($stmt1, ', ').")\n".rtrim($stmt2, ', ').')');
-    }
+    # wait till the thread pool has a space
+    while ($db->query('SELECT COUNT(*) FROM Progress WHERE done = FALSE') > $max_processes)
+        sleep(5);
+    $db->query('INSERT INTO Progress (done) VALUES (FALSE)');
+    # parallelize the execution because we have lots of files to sort through (works on macOS & Linux)
+    # http://php.net/manual/en/function.exec.php#86329
+    exec("php insert.php $localDirectory.$file > /dev/null &");
 }
 
+# delete temp table
+$db->query('DROP TABLE Progress');
 $db->close();

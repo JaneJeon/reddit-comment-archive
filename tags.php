@@ -1,6 +1,6 @@
 <?php
 # read the first couple of lines to find tags - you should have the files uncompressed at this point
-# see ingest.php for more details
+# see ingest.php for more details, and below for sample results
 
 $localDirectory = parse_ini_file('config.ini')['localDirectory'];
 $dir = dir($localDirectory) or die ('Not a valid directory');
@@ -33,3 +33,27 @@ foreach ($tags as $tag => $tally)
     $tags[$tag] = sprintf('%.2f%%', 100.0*$tally/$total);
 
 print_r($tags);
+
+# as an example, the latest archive RC_2017-06 yields the following result:
+# Array
+# (
+#     [author] => 100.00%
+#     [author_flair_css_class] => 100.00%
+#     [author_flair_text] => 100.00%
+#     [body] => 100.00%
+#     [can_gild] => 100.00%
+#     [controversiality] => 100.00%
+#     [created_utc] => 100.00%
+#     [distinguished] => 100.00%
+#     [edited] => 100.00%
+#     [gilded] => 100.00%
+#     [id] => 100.00%
+#     [link_id] => 100.00%
+#     [parent_id] => 100.00%
+#     [retrieved_on] => 100.00%
+#     [score] => 100.00%
+#     [stickied] => 100.00%
+#     [subreddit] => 100.00%
+#     [subreddit_id] => 100.00%
+#     [author_cakeday] => 0.33%
+# )
