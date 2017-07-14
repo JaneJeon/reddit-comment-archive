@@ -37,26 +37,35 @@ $table = rtrim($table, ',').')';
 
 $db->query($table);
 
-# TODO: check if index exists
 # add indices
-foreach ($i_fields as $field)
-    $db->query('CREATE INDEX idx_'.$field.' ON Comments ('.$field.')');
+foreach ($i_fields as $field) {
+    $idx = "idx_$field";
+    $idx_exists = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_NAME = 'Comments'
+                   AND INDEX_NAME = '$idx' AND TABLE_SCHEMA = DATABASE()";
+    # check if the index exists before creating one
+    if (!$db->query($idx_exists)->fetch_row()[0])
+        $db->query("CREATE INDEX $idx ON Comments ($field)");
+}
 
 $localDirectory = $var['localDirectory'];
 $dir = dir($localDirectory) or die ('Not a valid directory');
 
-// TODO
 while ($file = $dir->read()) {
-    # skip directory "files", files that are still zipped, and .DS_Store if you're using a mac
+    # skip directory "files", files that are still zipped, and .DS_Store if you're using a Mac
     if (preg_match('/\.(\S)*$/', $file)) continue;
     @$fp = fopen($localDirectory.$file, 'rb');
     while (!feof($fp)) {
         @$comment = json_decode(fgets($fp), true);
         # some lines are not in proper json format, so skip those
         if (!is_array($comment)) continue;
+        $stmt1 = 'INSERT INTO Comments (';
+        $stmt2 = 'VALUES (';
         foreach ($comment as $tag => $value) {
-        
+            $stmt1 = $stmt1.$tag.', ';
+            $stmt2 = $stmt2.$value.', ';
         }
+        # append two pieces of insert statement and execute it
+        $db->query(rtrim($stmt1, ', ').")\n".rtrim($stmt2, ', ').')');
     }
 }
 

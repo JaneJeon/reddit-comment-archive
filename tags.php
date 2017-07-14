@@ -3,6 +3,7 @@
 # see ingest.php for more details
 
 $localDirectory = parse_ini_file('config.ini')['localDirectory'];
+$dir = dir($localDirectory) or die ('Not a valid directory');
 
 # count how many times each tag appears
 $tags = [];
@@ -10,9 +11,9 @@ $total = 0;
 
 # get the latest file
 while ($file = $dir->read())
-    if (preg_match('/\.(\S)*$/', $file)) continue;
+    if (!preg_match('/\.(\S)*$/', $file)) $latest = $file;
 
-@$fp = fopen($localDirectory.$file, 'rb');
+$fp = fopen($localDirectory.$latest, 'rb') or die ('No archive detected');
 $start = microtime(true);
 
 # run for 5 minutes
