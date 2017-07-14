@@ -1,28 +1,29 @@
 <?php
-# read the first couple of lines to find tags
+# read the first couple of lines to find tags - you should have the files uncompressed at this point
+# see ingest.php for more details
 
-$localDirectory = "/volumes/My Passport Ultra/reddit comments/";
-$dir = dir($localDirectory);
+$localDirectory = parse_ini_file('config.ini')['localDirectory'];
 
 # count how many times each tag appears
 $tags = [];
 $total = 0;
 
-# read through every file to check for tags
-while ($file = $dir->read()) {
-    if (!preg_match('/\.(\S)*$/', $file)) {
-        @$fp = fopen($localDirectory.$file, 'rb');
-        while (!feof($fp)) {
-            @$comment = json_decode(fgets($fp), true);
-            # some lines are not in proper json format, so skip those
-            if (!is_array($comment)) continue;
-            foreach ($comment as $tag => $value)
-                array_key_exists($tag, $tags) ? $tags[$tag]++ : $tags[$tag] = 1;
-            $total++;
-        }
-        fclose($fp);
-    }
+# get the latest file
+while ($file = $dir->read())
+    if (preg_match('/\.(\S)*$/', $file)) continue;
+
+@$fp = fopen($localDirectory.$file, 'rb');
+$start = microtime(true);
+
+# run for 5 minutes
+while (!feof($fp) && (microtime(true) - $start < 5*60)) {
+    @$comment = json_decode(fgets($fp), true);
+    if (!is_array($comment)) continue;
+    foreach ($comment as $tag => $value)
+        array_key_exists($tag, $tags) ? $tags[$tag]++ : $tags[$tag] = 1;
+    $total++;
 }
+fclose($fp);
 
 $dir->close();
 

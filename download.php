@@ -1,9 +1,8 @@
 <?php
 # download the reddit comment archive
 
-# change local directory to your download location, preferably one with 1TB+ free space
-$localDirectory = "/volumes/My Passport Ultra/reddit comments/";
-$serverDirectory = "http://files.pushshift.io/reddit/comments/";
+$localDirectory = parse_ini_file('config.ini')['localDirectory'];
+$serverDirectory = 'http://files.pushshift.io/reddit/comments/';
 # the starting point for the archive downloads. If you want to start from the beginning, change to 'RC_2005-12.bz2'
 $downloadList = ['RC_2015-05.bz2'];
 
