@@ -11,7 +11,7 @@ Then, run the scripts in this order:
 3. tags.php (optional - use to get an idea of which tags you care about)
 4. ingest.php
 
-####Requirements:
+Requirements:
 * PHP 5.6+
 * MySQL 5.6+
 * Linux/macOS operating system
