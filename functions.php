@@ -1,9 +1,10 @@
 <?php
+require_once 'config.php';
 # some functions that are used repeatedly & syntax sugars
 
 # is it inefficient? yes. do I care? no.
 function get($field) {
-    return parse_ini_file('config.ini')[$field];
+    return get_object_vars(new config())[$field];
 }
 
 function get_logical_cores() {

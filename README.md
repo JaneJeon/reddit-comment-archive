@@ -3,7 +3,7 @@ Reddit Comment Archive
 These scripts download comment archives from [here](http://files.pushshift.io/reddit/comments/), decompress them, 
 extract comment tags, and insert the comments into the database.
 
-First, make a copy of config_example.ini into config.ini and change any config as you see fit.
+First, make a copy of config_example.php into config.php and change any config as you see fit.
 
 Then, run the scripts in this order:
 1. download.php
