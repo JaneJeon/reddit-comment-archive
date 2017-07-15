@@ -1,8 +1,11 @@
 <?php
-$file = $argv[1];
-$tags = parse_ini_file('config.ini')['tags'];
+require_once 'functions.php';
+# bulk insert process per file, to be run in parallel
 
-$db = new mysqli($var['host'], $var['username'], $var['password'], 'Reddit') or die ("Couldn't connect");
+$file = $argv[1];
+$tags = get('tags');
+
+if (!($db = getConnection_db(get('db_name')))) exit ("Couldn't connect");
 
 @$fp = fopen($file, 'rb');
 while (!feof($fp)) {
@@ -21,8 +24,8 @@ while (!feof($fp)) {
     $db->query(rtrim($stmt1, ', ').")\n".rtrim($stmt2, ', ').')');
 }
 
-# signal that the process is done
-$db->query('UPDATE Progress SET done = TRUE WHERE task_id = '
-                  .$db->query('SELECT task_id FROM Progress ORDER BY task_id LIMIT 1')->fetch_row()[0]);
+if (get('delete_on_insert')) exec("rm $file");
 
+# signal that the process is done
+pool_done($db);
 $db->close();

@@ -1,8 +1,8 @@
 <?php
+require_once 'functions.php';
 # read the first couple of lines to find tags - you should have the files uncompressed at this point
-# see ingest.php for more details, and below for sample results
 
-$localDirectory = parse_ini_file('config.ini')['localDirectory'];
+$localDirectory = get('localDirectory');
 $dir = dir($localDirectory) or die ('Not a valid directory');
 
 # count how many times each tag appears
@@ -13,11 +13,11 @@ $total = 0;
 while ($file = $dir->read())
     if (!preg_match('/\.(\S)*$/', $file)) $latest = $file;
 
-$fp = fopen($localDirectory.$latest, 'rb') or die ('No archive detected');
+@$fp = fopen($localDirectory.$latest, 'rb') or die ('No archive detected');
 $start = microtime(true);
 
 # run for 5 minutes
-while (!feof($fp) && (microtime(true) - $start < 5*60)) {
+while (!feof($fp) && (microtime(true) - $start < 5 * 60)) {
     @$comment = json_decode(fgets($fp), true);
     if (!is_array($comment)) continue;
     foreach ($comment as $tag => $value)
@@ -25,12 +25,11 @@ while (!feof($fp) && (microtime(true) - $start < 5*60)) {
     $total++;
 }
 fclose($fp);
-
 $dir->close();
 
 # convert tally to percentage
 foreach ($tags as $tag => $tally)
-    $tags[$tag] = sprintf('%.2f%%', 100.0*$tally/$total);
+    $tags[$tag] = sprintf('%.2f%%', 100.0 * $tally / $total);
 
 print_r($tags);
 

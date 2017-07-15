@@ -1,21 +1,22 @@
 <?php
+require_once 'functions.php';
 # download the reddit comment archive
 
-$localDirectory = parse_ini_file('config.ini')['localDirectory'];
+$localDirectory = get('localDirectory');
 $serverDirectory = 'http://files.pushshift.io/reddit/comments/';
-# the starting point for the archive downloads. If you want to start from the beginning, change to 'RC_2005-12.bz2'
-$downloadList = ['RC_2015-05.bz2'];
+$downloadList = [get('begin')];
 
 # first, get the html for the download page to figure out which files are available
 $ch = curl_init($serverDirectory);
-curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
+curl_setopt($ch,CURLOPT_RETURNTRANSFER,1); # suppress output
 $html = curl_exec($ch);
 curl_close($ch);
 
 # then, add each month's download link to our queue
 $dom = new DOMDocument();
 @$dom->loadHTML($html);
-foreach($dom->getElementsByTagName('a') as $node) {
+foreach ($dom->getElementsByTagName('a') as $node) {
+    # strip out ./ from file names
     $link = substr($node->getAttribute('href'), 2);
     # only interested in .bz2 files (the comment archive for each month)
     if (preg_match('/\.bz2$/', $link) && !in_array($link, $downloadList)
@@ -24,7 +25,7 @@ foreach($dom->getElementsByTagName('a') as $node) {
 }
 
 # use curl to directly save each month's archive into file to save memory
-foreach($downloadList as $file) {
+foreach ($downloadList as $file) {
     @$fp = fopen($localDirectory.$file, 'wb');
     $ch = curl_init($serverDirectory.$file);
     curl_setopt($ch, CURLOPT_FILE, $fp);
