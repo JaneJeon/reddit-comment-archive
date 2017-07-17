@@ -6,5 +6,4 @@ if (!($db = getConnection_db(get('db_name')))) exit ("Couldn't connect");
 
 exec("bzip2 -d $argv[1]");
 
-pool_done($db);
-$db->close();
+cleanup_process($db);

@@ -18,6 +18,9 @@ $dom = new DOMDocument();
 foreach ($dom->getElementsByTagName('a') as $node) {
     # strip out ./ from file names
     $link = substr($node->getAttribute('href'), 2);
+    # skip files that may already exist in the directory
+    if (file_exists($localDirectory.$link) ||
+            file_exists($localDirectory.substr($link, 0, -4))) continue;
     # only interested in .bz2 files (the comment archive for each month)
     if (preg_match('/\.bz2$/', $link) && !in_array($link, $downloadList)
             && (strcmp($link, end($downloadList)) > 0))

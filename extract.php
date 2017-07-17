@@ -13,9 +13,9 @@ if (!($max_process = get_logical_cores() + 1)) exit ('OS not supported');
 
 while ($file = $dir->read()) {
     # skip files that are already decompressed
-    if (!preg_match('/\.bz2$/', $file)) continue;
+    if (!preg_match('/^[^.][[:word:]-]*\.bz2$/', $file)) continue;
     wait_pool($db, $max_process);
-    exec('php decompress.php '.$localDirectory.$file.' > /dev/null/ &');
+    exec('php decompress.php '.$localDirectory.$file.' > /dev/null &');
 }
 
 destroy_pool($db);

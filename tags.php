@@ -11,7 +11,7 @@ $total = 0;
 
 # get the latest file
 while ($file = $dir->read())
-    if (!preg_match('/\.(\S)*$/', $file)) $latest = $file;
+    if (preg_match('/^(RC_)/', $file) && strpos($file, '.') === false) $latest = $file;
 
 @$fp = fopen($localDirectory.$latest, 'rb') or die ('No archive detected');
 $start = microtime(true);

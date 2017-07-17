@@ -1,10 +1,12 @@
 <?php
-require_once 'config.php';
+require_once 'Config.php';
 # some functions that are used repeatedly & syntax sugars
 
-# is it inefficient? yes. do I care? no.
 function get($field) {
-    return get_object_vars(new config())[$field];
+    # account for directories without / at the end
+    if ($field == 'localDirectory' && substr(constant("Config::$field"), -1) != '/')
+        return constant("Config::$field").'/';
+    return constant("Config::$field");
 }
 
 function get_logical_cores() {
@@ -33,22 +35,28 @@ function getConnection_db($db) {
 }
 
 function createPool(mysqli $db) {
+    # first, clean up
+    destroy_pool($db);
     $db->query('CREATE TABLE Progress (task_id INT PRIMARY KEY AUTO_INCREMENT, done BOOL NOT NULL)');
 }
 
 function wait_pool(mysqli $db, $max_process) {
     while ($db->query('SELECT COUNT(*) FROM Progress WHERE done = FALSE')->fetch_row()[0] > $max_process)
-        sleep(5);
+        sleep(get('interval'));
     # once a free space opens up, indicate that this task is coming in
     $db->query('INSERT INTO Progress (done) VALUES (FALSE)');
 }
 
-# notify the end of process
-function pool_done(mysqli $db) {
+function notify_pool_done(mysqli $db) {
     $db->query('UPDATE Progress SET done = TRUE WHERE task_id = '
             .$db->query('SELECT task_id FROM Progress ORDER BY task_id LIMIT 1')->fetch_row()[0]);
 }
 
 function destroy_pool(mysqli $db) {
     $db->query('DROP TABLE Progress');
+}
+
+function cleanup_process(mysqli $db) {
+    notify_pool_done($db);
+    $db->close();
 }
