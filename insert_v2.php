@@ -2,13 +2,13 @@
 require_once 'functions.php';
 # use json to csv conversion, then use mysql to directly load data from file
 
-$start = microtime(true);
-$row = 0;
+//$start = microtime(true);
+//$row = 0;
 $file = $argv[1];
 $tmp_name = $file.'_tmp';
 $tags = val('tags');
 $db = getConnection_db(val('db_name'));
-const row_limit = 1000000;
+$row_limit = val('row_limit');
 optimize($db);
 
 # we need to correct the file a bit first before loading into mysql
@@ -16,7 +16,7 @@ $fp = fopen($file, 'rb');
 while (!feof($fp)) {
     $tmp = fopen($tmp_name, 'wb');
     # chunk up data
-    for ($i = 0; $i < row_limit && !feof($fp); $i++) {
+    for ($i = 0; $i < $row_limit && !feof($fp); $i++) {
         if (($line = json_decode(str_replace('\r\n', '\n', fgets($fp)), true)) === NULL) {
             $i--;
             continue;
@@ -44,17 +44,17 @@ FIELDS TERMINATED BY ',' ENCLOSED BY '"'
 LINES TERMINATED BY '\n'
 LI;
     $db->query($query);
-    $row += $i;
+//    $row += $i;
 }
 
 fclose($fp);
 unlink($tmp_name);
 if (val('cleanup')) exec("rm $file");
 
-$num_rows = $db->query("SELECT table_rows FROM information_schema.tables
-                              WHERE table_name = 'Comments'")->fetch_row()[0];
+//$num_rows = $db->query("SELECT table_rows FROM information_schema.tables
+//                              WHERE table_name = 'Comments'")->fetch_row()[0];
 cleanup_process($db, $file);
 
-$duration = microtime(true) - $start;
-@printf("Inserted %d out of %d rows from [%s] in [%.2f]s.\n",
-        $num_rows, $row, end(explode('/', $file)), $duration);
+//$duration = microtime(true) - $start;
+//@printf("Inserted %d out of %d rows from [%s] in [%.2f]s.\n",
+//        $num_rows, $row, end(explode('/', $file)), $duration);

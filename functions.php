@@ -11,9 +11,9 @@ function val($field) {
 
 function num_logical_cores() {
     if (PHP_OS == 'Darwin') { # macOS
-        return (int) shell_exec("sysctl hw.logicalcpu | sed 's/hw.logicalcpu: //g'") + 1;
+        return (int) shell_exec("sysctl hw.logicalcpu | sed 's/hw.logicalcpu: //g'");
     } else if (PHP_OS == 'Linux') {
-        return (int) shell_exec("cat /proc/cpuinfo | grep processor | wc -l") + 1;
+        return (int) shell_exec("cat /proc/cpuinfo | grep processor | wc -l");
     } else return -1; # Windows, etc
 }
 
@@ -38,19 +38,23 @@ function createPool(mysqli $db) {
     # first, clean up
     destroy_pool($db);
     $db->query('CREATE TABLE Progress
-              (task_id INT PRIMARY KEY AUTO_INCREMENT, file VARCHAR(10) CHARACTER SET utf8mb4)');
+              (task_id INT PRIMARY KEY AUTO_INCREMENT, file TEXT CHARACTER SET utf8mb4)');
 }
 
 function wait_pool(mysqli $db, $max_process) {
-    while ($db->query('SELECT COUNT(*) FROM Progress WHERE file IS NULL')->fetch_row()[0] > $max_process)
+    while ($db->query('SELECT COUNT(*) FROM Progress WHERE file IS NULL')->fetch_row()[0] >= $max_process)
         sleep(val('interval'));
-    # once a free space opens up, indicate that this task is coming in
+    # once a free space opens up, indicate that this task is coming in (DRY)
     $db->query('INSERT INTO Progress (task_id) VALUES (NULL)');
 }
 
 function notify_pool_done(mysqli $db, $file) {
-    $db->query("UPDATE Progress SET file = '$file' WHERE task_id =
-              (SELECT task_id FROM Progress WHERE file IS NOT NULL ORDER BY task_id LIMIT 1)");
+    # for some reason, this simple SELECT query will go apeshit rather than returning a number just... randomly
+    while (!(@$row = $db->query("SELECT task_id FROM progress WHERE file IS NULL ORDER BY task_id LIMIT 1")
+            ->fetch_row()[0])) {
+        sleep(val('interval'));
+    }
+    $db->query("UPDATE Progress SET file = '$file' WHERE task_id = $row");
 }
 
 function destroy_pool(mysqli $db) {

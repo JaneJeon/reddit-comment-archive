@@ -1,5 +1,6 @@
 <?php
 require_once 'functions.php';
+error_reporting(E_ERROR);
 # set up the database, then insert comments
 # if you have already inserted comments from some files, or any duplicates, move them to another directory
 
@@ -23,7 +24,8 @@ createPool($db);
 # add data from each file
 while ($file = $dir->read()) {
     # skip directory "files", files that are still zipped, and .DS_Store if you're using a Mac
-    if (!preg_match('/^(RC_)/', $file) || strpos($file, '.') !== false) continue;
+    if (preg_match('/tmp$/', $file) || strpos($file, '.') !== false
+        || strpos($file, 'RC_') === false) continue;
     $archive_files[] = $localDirectory.$file;
     # wait till the thread pool has a space
     wait_pool($db, $max_process);
@@ -57,3 +59,7 @@ foreach (val('index') as $field) {
 }
 
 $db->close();
+
+# resources:
+# https://dev.mysql.com/doc/refman/5.7/en/load-data.html
+# http://derwiki.tumblr.com/post/24490758395/loading-half-a-billion-rows-into-mysql
