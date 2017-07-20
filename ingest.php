@@ -29,7 +29,7 @@ while ($file = $dir->read()) {
     wait_pool($db, $max_process);
     # parallelize the execution because we have lots of files to sort through
     # http://php.net/manual/en/function.exec.php#86329
-    exec('php insert.php '.$localDirectory.$file.' > /dev/null &');
+    exec('php insert_v2.php '.$localDirectory.$file.' > /dev/null &');
 }
 
 # need to keep this process alive after we've sent off all jobs to close pool and create indexes

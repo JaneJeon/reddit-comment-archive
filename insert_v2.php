@@ -9,9 +9,6 @@ $tmp_name = $file.'_tmp';
 $tags = val('tags');
 $db = getConnection_db(val('db_name'));
 const row_limit = 1000000;
-create_compressed_table($db);
-createPool($db);
-# optimize insertion for speed
 optimize($db);
 
 # we need to correct the file a bit first before loading into mysql
@@ -20,34 +17,44 @@ while (!feof($fp)) {
     $tmp = fopen($tmp_name, 'wb');
     # chunk up data
     for ($i = 0; $i < row_limit && !feof($fp); $i++) {
-        # first, replace the filthy windows newline characters
-        if (($arr = @json_decode(str_replace('\r\n', '\n', fgets($fp)), 1)) === NULL) continue;
-        # then, form a line appropriate for csv
-        $line = '';
-        # assuming your tags do appear on every single entry - if you go with the default, it should be set properly
-        foreach ($tags as $field => $type)
-            $line = $line.'"'.$arr[$field].'",';
-        fputs($tmp, substr($line, 0, -1)."\n");
+        if (($line = json_decode(str_replace('\r\n', '\n', fgets($fp)), true)) === NULL) {
+            $i--;
+            continue;
+        }
+        $vars = [];
+        foreach ($tags as $tag => $field) {
+            # only uncomment this if you have a field/tag that permits null values
+            # e.g. 'ups' field exists for older data, but doesn't exist in newer ones
+//            if (!isset($line[$tag])) {
+//                $i--;
+//                break;
+//            }
+            $vars[] = $tag == 'body' ? mysqli_real_escape_string($db, $line[$tag]) : $line[$tag];
+        }
+//        if (sizeof($vars) == sizeof($tags))
+            fputs($tmp, '"'.implode('","', $vars).'"'."\n");
     }
     fclose($tmp);
-    # feed database with tmp
-    # implicitly ignore errors by specifying local
+    # feed database with tmp - implicitly ignore errors by specifying local
+    # this deals with the LOTS of duplicates in the archives (the data is dirty AF!)
+    # apparently I don't need to escape by \
     $query = <<<LI
 LOAD DATA LOCAL INFILE '$tmp_name' INTO TABLE Comments
-FIELDS TERMINATED BY ',' ENCLOSED BY '"' ESCAPED BY ''
+FIELDS TERMINATED BY ',' ENCLOSED BY '"'
 LINES TERMINATED BY '\n'
 LI;
     $db->query($query);
     $row += $i;
-//    echo "row $row\n";
 }
 
 fclose($fp);
-//unlink($tmp_name);
+unlink($tmp_name);
 if (val('cleanup')) exec("rm $file");
 
-$num_rows = $db->query("SELECT COUNT(*) FROM Comments")->fetch_row()[0];
+$num_rows = $db->query("SELECT table_rows FROM information_schema.tables
+                              WHERE table_name = 'Comments'")->fetch_row()[0];
 cleanup_process($db, $file);
 
 $duration = microtime(true) - $start;
-printf("Inserted %d out of %d rows from [%s] in [%.2f]s.\n", $num_rows, $row, $file, $duration);
+@printf("Inserted %d out of %d rows from [%s] in [%.2f]s.\n",
+        $num_rows, $row, end(explode('/', $file)), $duration);
