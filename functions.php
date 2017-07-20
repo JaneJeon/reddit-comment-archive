@@ -2,14 +2,14 @@
 require_once 'Config.php';
 # some functions that are used repeatedly & syntax sugars
 
-function get($field) {
+function val($field) {
     # account for directories without / at the end
     if ($field == 'localDirectory' && substr(constant("Config::$field"), -1) != '/')
         return constant("Config::$field").'/';
     return constant("Config::$field");
 }
 
-function get_logical_cores() {
+function num_logical_cores() {
     if (PHP_OS == 'Darwin') { # macOS
         return (int) shell_exec("sysctl hw.logicalcpu | sed 's/hw.logicalcpu: //g'") + 1;
     } else if (PHP_OS == 'Linux') {
@@ -19,7 +19,7 @@ function get_logical_cores() {
 
 function getConnection_no_db() {
     try {
-        $db = new mysqli(get('host'), get('username'), get('password'));
+        $db = new mysqli(val('host'), val('username'), val('password'));
     } catch (Exception $e) {
         return 0;
     }
@@ -37,26 +37,47 @@ function getConnection_db($db) {
 function createPool(mysqli $db) {
     # first, clean up
     destroy_pool($db);
-    $db->query('CREATE TABLE Progress (task_id INT PRIMARY KEY AUTO_INCREMENT, done BOOL NOT NULL)');
+    $db->query('CREATE TABLE Progress
+              (task_id INT PRIMARY KEY AUTO_INCREMENT, file VARCHAR(10) CHARACTER SET utf8mb4)');
 }
 
 function wait_pool(mysqli $db, $max_process) {
-    while ($db->query('SELECT COUNT(*) FROM Progress WHERE done = FALSE')->fetch_row()[0] > $max_process)
-        sleep(get('interval'));
+    while ($db->query('SELECT COUNT(*) FROM Progress WHERE file IS NULL')->fetch_row()[0] > $max_process)
+        sleep(val('interval'));
     # once a free space opens up, indicate that this task is coming in
-    $db->query('INSERT INTO Progress (done) VALUES (FALSE)');
+    $db->query('INSERT INTO Progress (task_id) VALUES (NULL)');
 }
 
-function notify_pool_done(mysqli $db) {
-    $db->query('UPDATE Progress SET done = TRUE WHERE task_id = '
-            .$db->query('SELECT task_id FROM Progress ORDER BY task_id LIMIT 1')->fetch_row()[0]);
+function notify_pool_done(mysqli $db, $file) {
+    $db->query("UPDATE Progress SET file = '$file' WHERE task_id =
+              (SELECT task_id FROM Progress WHERE file IS NOT NULL ORDER BY task_id LIMIT 1)");
 }
 
 function destroy_pool(mysqli $db) {
     $db->query('DROP TABLE Progress');
 }
 
-function cleanup_process(mysqli $db) {
-    notify_pool_done($db);
+function cleanup_process(mysqli $db, $file) {
+    notify_pool_done($db, $file);
     $db->close();
+}
+
+function create_compressed_table(mysqli $db) {
+    # to enable table compression
+    $db->query('SET innodb_file_per_table = 1');
+    $db->query('SET innodb_file_format = Barracuda');
+    
+    # form table creation query from the tags
+    $table = 'CREATE TABLE IF NOT EXISTS Comments (';
+    foreach (val('tags') as $field => $type)
+        $table = $table."\n".$field.' '.$type.',';
+    $table = rtrim($table, ',').")\n".'ROW_FORMAT = COMPRESSED';
+    
+    $db->query($table);
+}
+
+function optimize(mysqli $db) {
+    $db->query('SET UNIQUE_CHECKS = 0');
+    $db->query("SET SESSION tx_isolation='READ-UNCOMMITTED'");
+    $db->query('SET sql_log_bin = 0');
 }

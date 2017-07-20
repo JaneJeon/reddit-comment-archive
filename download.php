@@ -2,9 +2,9 @@
 require_once 'functions.php';
 # download the reddit comment archive
 
-$localDirectory = get('localDirectory');
+$localDirectory = val('localDirectory');
 $serverDirectory = 'http://files.pushshift.io/reddit/comments/';
-$downloadList = [get('begin')];
+$downloadList = [val('begin')];
 
 # first, get the html for the download page to figure out which files are available
 $ch = curl_init($serverDirectory);

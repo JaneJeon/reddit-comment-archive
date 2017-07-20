@@ -18,21 +18,24 @@ class Config_example {
                   'score' => 'INT NOT NULL',
                   'subreddit' => 'VARCHAR(20) CHARACTER SET utf8mb4 NOT NULL',
                   'link_id' => 'VARCHAR(10) CHARACTER SET utf8mb4 NOT NULL PRIMARY KEY',
-                  'stickied' => 'BOOL NOT NULL',
-                  'subreddit_id' => 'VARCHAR(10) CHARACTER SET utf8mb4 NOT NULL',
                   'controversiality' => 'INT NOT NULL',
                   'body' => 'TEXT CHARACTER SET utf8mb4 NOT NULL',
                   'edited' => 'BOOL NOT NULL',
                   'gilded' => 'BOOL NOT NULL',
-                  'id' => 'VARCHAR(10) CHARACTER SET utf8mb4 NOT NULL',
                   'parent_id' => 'VARCHAR(10) CHARACTER SET utf8mb4 NOT NULL',
                   'author' => 'VARCHAR(20) CHARACTER SET utf8mb4 NOT NULL'];
     # fields to index
-    const index = ['parent_id', 'created_utc'];
+    const index = ['parent_id', 'created_utc', 'author'];
     # how many rows to insert at one time (batched insert). The bigger, the fewer back-and-forth.
     # since MySQL only supports up to 65,536 placeholders in a stored procedure, the maximum value would be:
     # (int) 65,536 / sizeof(tags)
-    const insert_batch = 5041;
+    const insert_batch = 6553;
     # how frequently should php check if the pool is free? (in seconds)
     const interval = 10;
+    # different modes of building query
+    const prep_stmt = true;
+    # delete the original archive after inserting data into the database?
+    const cleanup = true;
+    # how many queries should we cram into a single transaction?
+    const num_trans = 10000;
 }

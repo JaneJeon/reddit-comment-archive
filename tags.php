@@ -2,7 +2,7 @@
 require_once 'functions.php';
 # read the first couple of lines to find tags - you should have the files uncompressed at this point
 
-$localDirectory = get('localDirectory');
+$localDirectory = val('localDirectory');
 $dir = dir($localDirectory) or die ('Not a valid directory');
 
 # count how many times each tag appears
