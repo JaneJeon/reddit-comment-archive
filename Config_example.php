@@ -1,7 +1,7 @@
 <?php
 # class with configuration files, instead of using parse_ini_file, because that shit's fucking whacky
 
-class Config_example {
+class Config {
     # absolute path of the directory to locally save the archive (preferably one with 1TB+ of free space)
     # to make your life easier, choose a directory without any spaces in the name
     const localDirectory = "/path/to/directory/";

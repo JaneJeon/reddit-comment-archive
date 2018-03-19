@@ -1,11 +1,11 @@
 <?php
 require_once 'functions.php';
-error_reporting(E_ERROR);
 # set up the database, then insert comments
 # if you have already inserted comments from some files, or any duplicates, move them to another directory
 
 # getConnection function handles creating the database if it doesn't exist already
 if (!(@$db = getConnection_db(val('db_name')))) exit ('Failed to connect');
+optimize($db);
 
 $localDirectory = val('localDirectory');
 $dir = dir($localDirectory) or die ('Not a valid directory');
@@ -14,7 +14,8 @@ $dir = dir($localDirectory) or die ('Not a valid directory');
 $archive_files = [];
 
 # get logical core number to determine the size of process/thread pool
-if (!($max_process = num_logical_cores() + 1)) exit ('OS not supported');
+# adjust the max number of parallel processes as you see fit -- and make sure to adjust my.cnf accordingly
+if (!($max_process = num_logical_cores())) exit ('OS not supported');
 
 create_compressed_table($db);
 
@@ -29,6 +30,7 @@ while ($file = $dir->read()) {
     $archive_files[] = $localDirectory.$file;
     # wait till the thread pool has a space
     wait_pool($db, $max_process);
+    echo "Reading $file\n";
     # parallelize the execution because we have lots of files to sort through
     # http://php.net/manual/en/function.exec.php#86329
     exec('php insert_v2.php '.$localDirectory.$file.' > /dev/null &');

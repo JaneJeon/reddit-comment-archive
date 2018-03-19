@@ -14,7 +14,7 @@ function num_logical_cores() {
         return (int) shell_exec("sysctl hw.logicalcpu | sed 's/hw.logicalcpu: //g'");
     } else if (PHP_OS == 'Linux') {
         return (int) shell_exec("cat /proc/cpuinfo | grep processor | wc -l");
-    } else return -1; # Windows, etc
+    } else return 0; # Windows, etc
 }
 
 function getConnection_no_db() {
@@ -48,21 +48,20 @@ function wait_pool(mysqli $db, $max_process) {
     $db->query('INSERT INTO Progress (task_id) VALUES (NULL)');
 }
 
-function notify_pool_done(mysqli $db, $file) {
-    # for some reason, this simple SELECT query will go apeshit rather than returning a number just... randomly
-    while (!(@$row = $db->query("SELECT task_id FROM progress WHERE file IS NULL ORDER BY task_id LIMIT 1")
-            ->fetch_row()[0])) {
-        sleep(val('interval'));
-    }
-    $db->query("UPDATE Progress SET file = '$file' WHERE task_id = $row");
-}
-
 function destroy_pool(mysqli $db) {
     $db->query('DROP TABLE Progress');
 }
 
-function cleanup_process(mysqli $db, $file) {
-    notify_pool_done($db, $file);
+function notify_pool_done(mysqli $db, $file) {
+    if (!$db->ping()) {
+        sleep(val('interval'));
+        if (!$db->ping()) {
+            $db->close();
+            $db = getConnection_db(val('db_name'));
+        }
+    }
+    $db->query("UPDATE Progress SET file = '$file' WHERE task_id = ".
+            $db->query("SELECT task_id FROM Progress WHERE file IS NULL ORDER BY task_id LIMIT 1")->fetch_row()[0]);
     $db->close();
 }
 
@@ -82,6 +81,6 @@ function create_compressed_table(mysqli $db) {
 
 function optimize(mysqli $db) {
     $db->query('SET UNIQUE_CHECKS = 0');
+    $db->query('SET SQL_LOG_BIN = 0');
     $db->query("SET SESSION tx_isolation='READ-UNCOMMITTED'");
-    $db->query('SET sql_log_bin = 0');
 }

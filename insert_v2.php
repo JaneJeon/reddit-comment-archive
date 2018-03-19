@@ -43,6 +43,14 @@ LOAD DATA LOCAL INFILE '$tmp_name' INTO TABLE Comments
 FIELDS TERMINATED BY ',' ENCLOSED BY '"'
 LINES TERMINATED BY '\n'
 LI;
+    // keep trying until server gets back
+//    while (!$db->ping()) {
+//        sleep(10 * val('interval'));
+//        if (!$db->ping()) {
+//            $db->close();
+//            $db = getConnection_db(val('db_name'));
+//        }
+//    }
     $db->query($query);
 //    $row += $i;
 }
@@ -53,7 +61,7 @@ if (val('cleanup')) exec("rm $file");
 
 //$num_rows = $db->query("SELECT table_rows FROM information_schema.tables
 //                              WHERE table_name = 'Comments'")->fetch_row()[0];
-cleanup_process($db, $file);
+notify_pool_done($db, $file);
 
 //$duration = microtime(true) - $start;
 //@printf("Inserted %d out of %d rows from [%s] in [%.2f]s.\n",
